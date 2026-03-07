@@ -20,10 +20,13 @@ package org.apache.iceberg.connect.data;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.iceberg.PartitionSpec;
+import org.apache.iceberg.RowLevelOperationMode;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
@@ -33,6 +36,7 @@ import org.apache.iceberg.connect.events.TableReference;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.ForbiddenException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.relocated.com.google.common.annotations.VisibleForTesting;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types.StructType;
@@ -112,6 +116,12 @@ class IcebergWriterFactory {
     }
 
     PartitionSpec partitionSpec = spec;
+    Map<String, String> tableProperties = Maps.newHashMap(config.autoCreateProps());
+    // Use merge-on-read (deletion vectors) for upsert only when DV is enabled (v3 tables)
+    if (config.upsertModeEnabled() && config.upsertUseDeletionVectorEnabled()) {
+      tableProperties.put(
+          TableProperties.DELETE_MODE, RowLevelOperationMode.MERGE_ON_READ.modeName());
+    }
     AtomicReference<Table> result = new AtomicReference<>();
     Tasks.range(1)
         .retry(IcebergSinkConfig.CREATE_TABLE_RETRIES)
@@ -120,7 +130,7 @@ class IcebergWriterFactory {
               try {
                 result.set(
                     catalog.createTable(
-                        identifier, schema, partitionSpec, config.autoCreateProps()));
+                        identifier, schema, partitionSpec, tableProperties));
               } catch (AlreadyExistsException e) {
                 result.set(catalog.loadTable(identifier));
               }

@@ -76,6 +76,8 @@ public class IcebergSinkConfig extends AbstractConfig {
       "iceberg.tables.upsert-mode-enabled";
   private static final String TABLES_INSERT_TO_UPDATE_ENABLED_PROP =
       "iceberg.tables.insert-to-update-enabled";
+  private static final String TABLES_UPSERT_USE_DELETION_VECTOR_PROP =
+      "iceberg.tables.upsert-use-deletion-vector";
   private static final String TABLES_AUTO_CREATE_ENABLED_PROP =
       "iceberg.tables.auto-create-enabled";
   private static final String TABLES_EVOLVE_SCHEMA_ENABLED_PROP =
@@ -253,6 +255,14 @@ public class IcebergSinkConfig extends AbstractConfig {
         Importance.MEDIUM,
         "set to true to convert Insert to Update when upsertMode enabled , else set to false");
     configDef.define(
+        TABLES_UPSERT_USE_DELETION_VECTOR_PROP,
+        ConfigDef.Type.BOOLEAN,
+        false,
+        Importance.MEDIUM,
+        "Set to true to use deletion vectors for upsert in-batch deletes. Only applied when "
+            + "upsert is enabled and table format version is 3 or higher. When false, position "
+            + "delete files are used.");
+    configDef.define(
         TABLES_CDC_FIELD_PROP,
         ConfigDef.Type.STRING,
         null,
@@ -388,6 +398,10 @@ public class IcebergSinkConfig extends AbstractConfig {
 
   public boolean upsertModeEnabled() {
     return getBoolean(TABLES_UPSERT_MODE_ENABLED_PROP);
+  }
+
+  public boolean upsertUseDeletionVectorEnabled() {
+    return getBoolean(TABLES_UPSERT_USE_DELETION_VECTOR_PROP);
   }
 
   public TableSinkConfig tableConfig(String tableName) {

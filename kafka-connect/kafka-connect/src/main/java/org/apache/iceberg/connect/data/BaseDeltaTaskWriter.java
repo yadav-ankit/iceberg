@@ -25,6 +25,7 @@ import org.apache.iceberg.PartitionKey;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.StructLike;
+import org.apache.iceberg.deletes.DeleteGranularity;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
@@ -43,6 +44,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final RecordProjection keyProjection;
   private final boolean upsertMode;
   private final boolean insertToUpdateMode;
+  private final boolean useDeletionVectors;
 
   BaseDeltaTaskWriter(
       PartitionSpec spec,
@@ -54,8 +56,9 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
       Schema schema,
       Set<Integer> identifierFieldIds,
       boolean upsertMode,
-      boolean insertToUpdateMode) {
-    super(spec, format, writerFactory, fileFactory, io, targetFileSize);
+      boolean insertToUpdateMode,
+      boolean useDeletionVectors) {
+    super(spec, format, writerFactory, fileFactory, io, targetFileSize, useDeletionVectors);
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(identifierFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
@@ -63,6 +66,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     this.keyProjection = RecordProjection.create(schema, deleteSchema);
     this.upsertMode = upsertMode;
     this.insertToUpdateMode = insertToUpdateMode;
+    this.useDeletionVectors = useDeletionVectors;
   }
 
   abstract RowDataDeltaWriter route(Record row);
@@ -100,7 +104,12 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   class RowDataDeltaWriter extends BaseEqualityDeltaWriter {
 
     RowDataDeltaWriter(PartitionKey partition) {
-      super(partition, schema, deleteSchema);
+      super(
+          partition,
+          schema,
+          deleteSchema,
+          DeleteGranularity.PARTITION,
+          useDeletionVectors ? dvFileWriter() : null);
     }
 
     @Override

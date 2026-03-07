@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableProperties;
+import org.apache.iceberg.TableUtil;
 import org.apache.iceberg.connect.IcebergSinkConfig;
 import org.apache.iceberg.connect.events.TableReference;
 import org.apache.iceberg.data.GenericFileWriterFactory;
@@ -158,6 +159,12 @@ class RecordUtils {
             .format(format)
             .build();
 
+    // Use deletion vectors for upsert only when flag is enabled and table is format v3+
+    boolean useDeletionVectors =
+        config.upsertModeEnabled()
+            && config.upsertUseDeletionVectorEnabled()
+            && TableUtil.formatVersion(table) >= 3;
+
     TaskWriter<Record> writer;
     if (table.spec().isUnpartitioned()) {
       if (config.tablesCdcField() == null && !config.upsertModeEnabled()) {
@@ -176,7 +183,8 @@ class RecordUtils {
                 table.schema(),
                 identifierFieldIds,
                 config.upsertModeEnabled(),
-                config.insertToUpdateModeEnabled());
+                config.insertToUpdateModeEnabled(),
+                useDeletionVectors);
       }
     } else {
       if (config.tablesCdcField() == null && !config.upsertModeEnabled()) {
@@ -201,7 +209,8 @@ class RecordUtils {
                 table.schema(),
                 identifierFieldIds,
                 config.upsertModeEnabled(),
-                config.insertToUpdateModeEnabled());
+                config.insertToUpdateModeEnabled(),
+                useDeletionVectors);
       }
     }
     return writer;

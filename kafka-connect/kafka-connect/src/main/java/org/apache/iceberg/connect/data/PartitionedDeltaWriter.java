@@ -48,7 +48,8 @@ public class PartitionedDeltaWriter extends BaseDeltaTaskWriter {
       Schema schema,
       Set<Integer> identifierFieldIds,
       boolean upsertMode,
-      boolean insertToUpdateMode) {
+      boolean insertToUpdateMode,
+      boolean useDeletionVectors) {
     super(
         spec,
         format,
@@ -59,7 +60,8 @@ public class PartitionedDeltaWriter extends BaseDeltaTaskWriter {
         schema,
         identifierFieldIds,
         upsertMode,
-        insertToUpdateMode);
+        insertToUpdateMode,
+        useDeletionVectors);
     this.partitionKey = new PartitionKey(spec, schema);
   }
 

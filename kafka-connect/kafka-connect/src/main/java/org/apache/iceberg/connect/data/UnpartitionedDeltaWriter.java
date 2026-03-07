@@ -41,7 +41,8 @@ public class UnpartitionedDeltaWriter extends BaseDeltaTaskWriter {
       Schema schema,
       Set<Integer> identifierFieldIds,
       boolean upsertMode,
-      boolean insertToUpdateMode) {
+      boolean insertToUpdateMode,
+      boolean useDeletionVectors) {
     super(
         spec,
         format,
@@ -52,7 +53,8 @@ public class UnpartitionedDeltaWriter extends BaseDeltaTaskWriter {
         schema,
         identifierFieldIds,
         upsertMode,
-        insertToUpdateMode);
+        insertToUpdateMode,
+        useDeletionVectors);
     this.writer = new RowDataDeltaWriter(null);
   }
 
